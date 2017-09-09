@@ -12,9 +12,11 @@ ws.on('close', function close(code, reason) {
 
 ws.on('message', function incoming(data) {
     console.log(data);
-    setTimeout(function timeout() {
-        let msgBatch = 10000;
-        for (let i = 0; i < msgBatch; ++i)
-            ws.send("I'm CLIENT");
-    }, 5000);
 });
+
+setInterval(() => {
+    console.log('>>>> Sending Interval...');
+    let msgBatch = 10;
+    for (let i = 0; i < msgBatch; ++i)
+        ws.send("I'm CLIENT");
+}, 5000);

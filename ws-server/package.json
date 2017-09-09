@@ -5,8 +5,7 @@
     "devDependencies": {},
     "dependencies": {
         "ws": ">=1.0.0",
-        "cluster": "",
-        "pm2": ""
+        "cluster": ""
     },
     "scripts": {
         "start": "pm2 start main.js",
