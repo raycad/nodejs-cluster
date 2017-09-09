@@ -16,7 +16,7 @@ ws.on('message', function incoming(data) {
 
 setInterval(() => {
     console.log('>>>> Sending Interval...');
-    let msgBatch = 1000;
+    let msgBatch = 100;
     for (let i = 0; i < msgBatch; ++i)
         ws.send("I'm CLIENT");
 }, 5000);

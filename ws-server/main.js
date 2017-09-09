@@ -15,13 +15,17 @@ const REQ_COUNTER_STAT_TIMEOUT = 5000;
 var requestCounter = 0;
 var asyncTasks = [];
 
+var startTimer = new Date().getTime();
+var endTimer;
+
 function randomNumber(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function slowComputation(callback) {
     // Set the size larger to make longer computation to test performance
-    let size = randomNumber(10000, 20000),
+    const factor = 10000;
+    let size = randomNumber(factor, 2 * factor),
         result = 0;
 
     for (i = 0; i < size; ++i) {
@@ -29,9 +33,37 @@ function slowComputation(callback) {
             ++result;
     }
 
-    console.log("Computing with size = %d; Result = %d", size, result);
+    //console.log("Computing with size = %d; Result = %d", size, result);
 
     return callback(result);
+}
+
+function requestStatistics() {
+    /*var startTimer = new Date().getTime(),
+        endTimer;
+    setInterval(() => {
+        endTimer = new Date().getTime();
+        let timeDiff = endTimer - startTimer;
+        startTimer = new Date().getTime();
+        console.log("====> Number Of Requests In %d(s): %d; AsyncTasks Numbers = %d",
+            timeDiff / 1000, requestCounter, asyncTasks.length);
+
+        // Reset requestCounter
+        requestCounter = 0;
+    }, REQ_COUNTER_STAT_TIMEOUT);*/
+    if (requestCounter > 10) {
+        endTimer = new Date().getTime();
+
+        let timeDiff = endTimer - startTimer;
+        console.log("====> Number Of Requests In %d(s) Is %d; AsyncTasks Numbers Is %d",
+            timeDiff / 1000, requestCounter, asyncTasks.length);
+
+        // Reset requestCounter
+        requestCounter = 0;
+
+        // Reset startTimer
+        startTimer = new Date().getTime();
+    }
 }
 
 function startServer() {
@@ -46,6 +78,8 @@ function startServer() {
                 process.send({ cmd: "NotifyRequest" });
             } else {
                 ++requestCounter;
+
+                requestStatistics();
             }
 
             // console.log("Server received: %s", message);
@@ -91,6 +125,8 @@ function addWorker() {
     function messageHandler(msg) {
         if (msg.cmd && msg.cmd === "NotifyRequest") {
             ++requestCounter;
+
+            requestStatistics();
         }
     }
 
@@ -115,8 +151,6 @@ function startClusterMode() {
         const numCPUs = require("os").cpus().length;
         console.log("Number of CPU is %d", numCPUs);
 
-        requestStatistics();
-
         for (let i = 0; i < numCPUs; i++)
             addWorker();
 
@@ -131,21 +165,6 @@ function startClusterMode() {
     }
 }
 
-function requestStatistics() {
-    var startTimer = new Date().getTime(),
-        endTimer;
-    setInterval(() => {
-        endTimer = new Date().getTime();
-        let timeDiff = endTimer - startTimer;
-        startTimer = new Date().getTime();
-        console.log("====> Number Of Requests In %d(s): %d; AsyncTasks Numbers = %d",
-            timeDiff / 1000, requestCounter, asyncTasks.length);
-
-        // Reset requestCounter
-        requestCounter = 0;
-    }, REQ_COUNTER_STAT_TIMEOUT);
-}
-
 function main() {
     console.log("USE_CLUSTER_MODE = %d; USE_ASYNC = %d", USE_CLUSTER_MODE, USE_ASYNC);
 
@@ -153,12 +172,12 @@ function main() {
         startClusterMode();
     else {
         //requestStatistics();
-        var ats = [];
+        /*var ats = [];
         ats.push(function() {
             requestStatistics();
         });
 
-        async.parallel(ats, function() {});
+        async.parallel(ats, function() {});*/
 
         startServer();
     }
