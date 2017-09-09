@@ -1,14 +1,38 @@
 // https://github.com/justinklemm/nodejs-async-tutorial/blob/master/async-parallel.js
+// https://nodejs.org/api/cluster.html#cluster_class_worker
 
 const cluster = require("cluster");
 const util = require("util");
 const exec = require("child_process").exec;
+const async = require("async");
 
-const USE_CLUSTER_MODE = 1;
+const USE_CLUSTER_MODE = 0;
+const USE_ASYNC = 0;
+
 // Request Counter Statistics Timeout (In MilliSeconds)
 const REQ_COUNTER_STAT_TIMEOUT = 5000;
 
 var requestCounter = 0;
+var asyncTasks = [];
+
+function randomNumber(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function slowComputation(callback) {
+    // Set the size larger to make longer computation to test performance
+    let size = randomNumber(10000, 20000),
+        result = 0;
+
+    for (i = 0; i < size; ++i) {
+        for (k = 0; k < size; ++k)
+            ++result;
+    }
+
+    console.log("Computing with size = %d; Result = %d", size, result);
+
+    return callback(result);
+}
 
 function startServer() {
     const WebSocket = require("ws");
@@ -27,14 +51,23 @@ function startServer() {
             // console.log("Server received: %s", message);
 
             // Set the size larger to make longer computation to test performance
-            let size = 1,
-                result = 0;
-            for (i = 0; i < size; ++i) {
-                for (k = 0; k < size; ++k)
-                    ++result;
-            }
+            let result = 0;
+            if (USE_ASYNC) {
+                // Array to hold async tasks
+                asyncTasks.push(function() {
+                    slowComputation(function(result) {
+                        ws.send("SERVER with PROCESS ID = " + process.pid + ", returns " + result);
+                    });
+                });
 
-            ws.send("SERVER with PROCESS ID = " + process.pid + ", returns " + result);
+                async.parallel(asyncTasks, function(result) {
+                    // All tasks are done now
+                    ws.send("SERVER with PROCESS ID = " + process.pid + ", returns " + result);
+                });
+            } else
+                slowComputation(function(result) {
+                    ws.send("SERVER with PROCESS ID = " + process.pid + ", returns " + result);
+                });
         });
 
         ws.on("close", function close(code, reason) {
@@ -105,8 +138,8 @@ function requestStatistics() {
         endTimer = new Date().getTime();
         let timeDiff = endTimer - startTimer;
         startTimer = new Date().getTime();
-        console.log("====> Number Of Requests In %d(s): %d",
-            timeDiff / 1000, requestCounter);
+        console.log("====> Number Of Requests In %d(s): %d; AsyncTasks Numbers = %d",
+            timeDiff / 1000, requestCounter, asyncTasks.length);
 
         // Reset requestCounter
         requestCounter = 0;
@@ -114,12 +147,19 @@ function requestStatistics() {
 }
 
 function main() {
-    console.log("USE_CLUSTER_MODE = %d", USE_CLUSTER_MODE);
+    console.log("USE_CLUSTER_MODE = %d; USE_ASYNC = %d", USE_CLUSTER_MODE, USE_ASYNC);
 
     if (USE_CLUSTER_MODE)
         startClusterMode();
     else {
-        requestStatistics();
+        //requestStatistics();
+        var ats = [];
+        ats.push(function() {
+            requestStatistics();
+        });
+
+        async.parallel(ats, function() {});
+
         startServer();
     }
 }
