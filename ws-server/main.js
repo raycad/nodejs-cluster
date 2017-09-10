@@ -2,7 +2,7 @@ const cluster = require("cluster");
 const util = require("util");
 const exec = require("child_process").exec;
 const async = require("async");
-var constants = require("./constants");
+var Constants = require("./constants");
 
 var requestCounter = 0;
 var asyncTasks = [];
@@ -62,14 +62,14 @@ function statisticsRequests() {
 
 function startWsServer() {
     const WebSocket = require("ws");
-    var port = process.env.PORT || constants.WS_PORT;
+    var port = process.env.PORT || Constants.WS_PORT;
     const wss = new WebSocket.Server({ port: port });
 
     wss.on("connection", function connection(ws, req) {
         ws.on("message", function incoming(message) {
-            if (constants.USE_CLUSTER_MODE) {
+            if (Constants.USE_CLUSTER_MODE) {
                 // Notify to the Node Master about the request
-                process.send({ cmd: constants.NCC_NOTIFY_REQUEST });
+                process.send({ cmd: Constants.NCC_NOTIFY_REQUEST });
             } else {
                 ++requestCounter;
 
@@ -80,7 +80,7 @@ function startWsServer() {
 
             // Set the size larger to make longer computation to test performance
             let result = 0;
-            if (constants.USE_ASYNC) {
+            if (Constants.USE_ASYNC) {
                 // Array to hold async tasks
                 asyncTasks.push(function() {
                     longComputation(function(result) {
@@ -97,7 +97,7 @@ function startWsServer() {
             } else {
                 var msg;
                 longComputation(function(result) {
-                    if (constants.USE_CLUSTER_MODE)
+                    if (Constants.USE_CLUSTER_MODE)
                         msg = "SERVER with process.pid = " + process.pid +
                         ", cluster.worker.id = " + cluster.worker.id + " returns " + result;
                     else
@@ -127,7 +127,7 @@ function startWsServer() {
 function createWorker() {
     // Count requests
     function messageHandler(msg) {
-        if (msg.cmd && msg.cmd === constants.NCC_NOTIFY_REQUEST) {
+        if (msg.cmd && msg.cmd === Constants.NCC_NOTIFY_REQUEST) {
             ++requestCounter;
             statisticsRequests();
         }
@@ -170,9 +170,9 @@ function createNodeCluster() {
 }
 
 function main() {
-    console.log("USE_CLUSTER_MODE = %d; USE_ASYNC = %d", constants.USE_CLUSTER_MODE, constants.USE_ASYNC);
+    console.log("USE_CLUSTER_MODE = %d; USE_ASYNC = %d", Constants.USE_CLUSTER_MODE, Constants.USE_ASYNC);
 
-    if (constants.USE_CLUSTER_MODE)
+    if (Constants.USE_CLUSTER_MODE)
         createNodeCluster();
     else {
         //requestStatistics();

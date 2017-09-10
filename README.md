@@ -1,4 +1,4 @@
-Example for testing NodeJS performance.<br />
+****Example for testing NodeJS performance.****<br />
 
 **1. ws-server**<br />
 A websocket server example.<br />
@@ -11,6 +11,18 @@ USE_ASYNC: 0<br />
 $ cd ws-server
 $ npm install
 $ node main.js
+```
+
+If you want to test separately with standalone & cluster modes you can use the following commands:<br />
+
+```
+// Start in standalone mode
+$ node node.js
+```
+
+```
+// Start in cluster mode
+$ node cluster.js
 ```
 
 **2. ws-client**<br />
