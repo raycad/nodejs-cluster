@@ -11,26 +11,6 @@ const wss = new WebSocket.Server({ port: port });
 var startTimer = new Date().getTime();
 var endTimer;
 
-function randomNumber(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function longComputation(callback) {
-    // Set the size larger to make longer computation to test performance
-    const factor = 10000;
-    let size = randomNumber(factor, 2 * factor),
-        result = 0;
-
-    for (i = 0; i < size; ++i) {
-        for (k = 0; k < size; ++k)
-            ++result;
-    }
-
-    //console.log("Computing with size = %d; Result = %d", size, result);
-
-    return callback(result);
-}
-
 function createWsServer() {
     wss.on("connection", function connection(ws, req) {
         ws.on("message", function incoming(message) {
@@ -48,7 +28,7 @@ function createWsServer() {
             // Set the size larger to make longer computation to test performance
             let result = 0;
             var msg;
-            longComputation(function(result) {
+            sharedData.longComputation(function(result) {
                 msg = "SERVER with process.pid = " + process.pid + " returns " + result;
             });
 

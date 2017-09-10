@@ -3,26 +3,6 @@ const util = require("util");
 var Constants = require("./constants");
 require("./shared_data");
 
-function randomNumber(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function longComputation(callback) {
-    // Set the size larger to make longer computation to test performance
-    const factor = 10000;
-    let size = randomNumber(factor, 2 * factor),
-        result = 0;
-
-    for (i = 0; i < size; ++i) {
-        for (k = 0; k < size; ++k)
-            ++result;
-    }
-
-    //console.log("Computing with size = %d; Result = %d", size, result);
-
-    return callback(result);
-}
-
 function createWorker() {
     // Count requests
     function messageHandler(msg) {
