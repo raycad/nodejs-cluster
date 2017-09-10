@@ -1,16 +1,8 @@
-// https://github.com/justinklemm/nodejs-async-tutorial/blob/master/async-parallel.js
-// https://nodejs.org/api/cluster.html#cluster_class_worker
-
 const cluster = require("cluster");
 const util = require("util");
 const exec = require("child_process").exec;
 const async = require("async");
-
-const USE_CLUSTER_MODE = 0;
-const USE_ASYNC = 0;
-
-// Request Counter Statistics Timeout (In MilliSeconds)
-const REQ_COUNTER_STAT_TIMEOUT = 5000;
+var constants = require("./constants");
 
 var requestCounter = 0;
 var asyncTasks = [];
@@ -22,7 +14,7 @@ function randomNumber(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function slowComputation(callback) {
+function longComputation(callback) {
     // Set the size larger to make longer computation to test performance
     const factor = 10000;
     let size = randomNumber(factor, 2 * factor),
@@ -38,7 +30,9 @@ function slowComputation(callback) {
     return callback(result);
 }
 
-function requestStatistics() {
+function statisticsRequests() {
+    // [FIXME]: Use Interval in long computation might be delayed long time, hence,
+    // move to request count solution
     /*var startTimer = new Date().getTime(),
         endTimer;
     setInterval(() => {
@@ -50,7 +44,7 @@ function requestStatistics() {
 
         // Reset requestCounter
         requestCounter = 0;
-    }, REQ_COUNTER_STAT_TIMEOUT);*/
+    }, constants.REQ_COUNTER_STAT_TIMEOUT);*/
     if (requestCounter > 10) {
         endTimer = new Date().getTime();
 
@@ -68,40 +62,50 @@ function requestStatistics() {
 
 function startServer() {
     const WebSocket = require("ws");
-    var port = process.env.PORT || 2706;
+    var port = process.env.PORT || constants.WS_PORT;
     const wss = new WebSocket.Server({ port: port });
 
     wss.on("connection", function connection(ws, req) {
         ws.on("message", function incoming(message) {
-            if (USE_CLUSTER_MODE) {
+            if (constants.USE_CLUSTER_MODE) {
                 // Notify to the Node Master about the request
-                process.send({ cmd: "NotifyRequest" });
+                process.send({ cmd: constants.NCC_NOTIFY_REQUEST });
             } else {
                 ++requestCounter;
 
-                requestStatistics();
+                statisticsRequests();
             }
 
             // console.log("Server received: %s", message);
 
             // Set the size larger to make longer computation to test performance
             let result = 0;
-            if (USE_ASYNC) {
+            if (constants.USE_ASYNC) {
                 // Array to hold async tasks
                 asyncTasks.push(function() {
-                    slowComputation(function(result) {
-                        ws.send("SERVER with PROCESS ID = " + process.pid + ", returns " + result);
+                    longComputation(function(result) {
+                        ws.send("SERVER with process.pid = " + process.pid +
+                            ", cluster.worker.id = " + cluster.worker.id + " returns " + result);
                     });
                 });
 
                 async.parallel(asyncTasks, function(result) {
                     // All tasks are done now
-                    ws.send("SERVER with PROCESS ID = " + process.pid + ", returns " + result);
+                    // ws.send("SERVER with process.pid = " + process.pid +
+                    // ", cluster.worker.id = " + cluster.worker.id + " returns " + result);
                 });
-            } else
-                slowComputation(function(result) {
-                    ws.send("SERVER with PROCESS ID = " + process.pid + ", returns " + result);
+            } else {
+                var msg;
+                longComputation(function(result) {
+                    if (constants.USE_CLUSTER_MODE)
+                        msg = "SERVER with process.pid = " + process.pid +
+                        ", cluster.worker.id = " + cluster.worker.id + " returns " + result;
+                    else
+                        msg = "SERVER with process.pid = " + process.pid + " returns " + result;
                 });
+
+                ws.send(msg);
+            }
         });
 
         ws.on("close", function close(code, reason) {
@@ -123,14 +127,13 @@ function startServer() {
 function addWorker() {
     // Count requests
     function messageHandler(msg) {
-        if (msg.cmd && msg.cmd === "NotifyRequest") {
+        if (msg.cmd && msg.cmd === constants.NCC_NOTIFY_REQUEST) {
             ++requestCounter;
-
-            requestStatistics();
+            statisticsRequests();
         }
     }
 
-    let worker = cluster.fork();
+    var worker = cluster.fork();
     worker.on("listening", (address) => {
         console.log("Worker Id = %d, Address = %s, Port = %d is listening",
             worker.process.pid, address.address, address.port);
@@ -160,15 +163,15 @@ function startClusterMode() {
                 addWorker();
             }
         });
-    } else if (cluster.isWorker) {
+    } else {
         startServer();
     }
 }
 
 function main() {
-    console.log("USE_CLUSTER_MODE = %d; USE_ASYNC = %d", USE_CLUSTER_MODE, USE_ASYNC);
+    console.log("USE_CLUSTER_MODE = %d; USE_ASYNC = %d", constants.USE_CLUSTER_MODE, constants.USE_ASYNC);
 
-    if (USE_CLUSTER_MODE)
+    if (constants.USE_CLUSTER_MODE)
         startClusterMode();
     else {
         //requestStatistics();

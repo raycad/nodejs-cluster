@@ -13,11 +13,11 @@ $ node main.js
 **2. ws-client**<br />
 A websocket client example.<br />
 
-Switch USE_CLUSTER_MODE and USE_ASYNC in the main.js file to enable cluster and async mode.<br />
+Switch USE_CLUSTER_MODE and USE_ASYNC in the **constants.js** file to enable cluster and async mode.<br />
 
-const USE_CLUSTER_MODE = 0;<br />
+USE_CLUSTER_MODE: 0<br />
 
-const USE_ASYNC = 0;<br />
+USE_ASYNC: 0<br />
 
 ```
 $ cd ws-client
