@@ -2,7 +2,7 @@
 // https://nodejs.org/api/cluster.html#cluster_class_worker
 
 module.exports = Object.freeze({
-    USE_CLUSTER_MODE: 0,
+    USE_CLUSTER_MODE: 1,
     USE_ASYNC: 0,
 
     // Websocket constants

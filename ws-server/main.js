@@ -60,7 +60,7 @@ function statisticsRequests() {
     }
 }
 
-function startServer() {
+function startWsServer() {
     const WebSocket = require("ws");
     var port = process.env.PORT || constants.WS_PORT;
     const wss = new WebSocket.Server({ port: port });
@@ -124,7 +124,7 @@ function startServer() {
     });
 }
 
-function addWorker() {
+function createWorker() {
     // Count requests
     function messageHandler(msg) {
         if (msg.cmd && msg.cmd === constants.NCC_NOTIFY_REQUEST) {
@@ -146,7 +146,7 @@ function addWorker() {
     worker.on("message", messageHandler);
 }
 
-function startClusterMode() {
+function createNodeCluster() {
     if (cluster.isMaster) {
         console.log(">>>> Master %d is running", process.pid);
 
@@ -155,16 +155,17 @@ function startClusterMode() {
         console.log("Number of CPU is %d", numCPUs);
 
         for (let i = 0; i < numCPUs; i++)
-            addWorker();
+            createWorker();
 
         cluster.on("exit", function(worker, code) {
             if (code != 0 && !worker.suicide) {
                 console.log("Worker crashed. Starting a new worker");
-                addWorker();
+                createWorker();
             }
         });
     } else {
-        startServer();
+        // Start a Websocket server
+        startWsServer();
     }
 }
 
@@ -172,7 +173,7 @@ function main() {
     console.log("USE_CLUSTER_MODE = %d; USE_ASYNC = %d", constants.USE_CLUSTER_MODE, constants.USE_ASYNC);
 
     if (constants.USE_CLUSTER_MODE)
-        startClusterMode();
+        createNodeCluster();
     else {
         //requestStatistics();
         /*var ats = [];
@@ -182,7 +183,8 @@ function main() {
 
         async.parallel(ats, function() {});*/
 
-        startServer();
+        // Start a Websocket server
+        startWsServer();
     }
 }
 
